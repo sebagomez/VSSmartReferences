@@ -4,6 +4,7 @@
 		<Identity Id="VSSmartReferences.sebastian.4a0a5807-d879-4cbb-b477-b2cbd831a52f" Version="1.0" Language="en-US" Publisher="sebagomez" />
 		<DisplayName>VSSmartReferences</DisplayName>
 		<Description xml:space="preserve">Fixes project references to be conditioned by the build scope</Description>
+		<MoreInfo>https://github.com/sebagomez/VSSmartReferences</MoreInfo>
 		<Icon>Resources\brain.ico</Icon>
 	</Metadata>
 	<Installation>

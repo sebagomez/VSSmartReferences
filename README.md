@@ -9,4 +9,4 @@ to this
 
 <img src="res//after.png" width="700">
 
-
+If you prefer to get the compiled release go to the [Visual Studio Gallery](https://marketplace.visualstudio.com/vsgallery/3078528d-b103-43c5-908a-d1646e4c1957)
