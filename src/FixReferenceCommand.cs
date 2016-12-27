@@ -89,28 +89,6 @@ namespace VSSmartReferences
 			Instance = new FixReferenceCommand(package);
 		}
 
-		/// <summary>
-		/// This function is the callback used to execute the command when the menu item is clicked.
-		/// See the constructor to see how the menu item is associated with this function using
-		/// OleMenuCommandService service and MenuCommand class.
-		/// </summary>
-		/// <param name="sender">Event sender.</param>
-		/// <param name="e">Event args.</param>
-		private void MenuItemCallback(object sender, EventArgs e)
-		{
-			string message = string.Format(CultureInfo.CurrentCulture, "Inside {0}.MenuItemCallback()", this.GetType().FullName);
-			string title = "FixReferenceCommand";
-
-			// Show a message box to prove we were here
-			VsShellUtilities.ShowMessageBox(
-				this.ServiceProvider,
-				message,
-				title,
-				OLEMSGICON.OLEMSGICON_INFO,
-				OLEMSGBUTTON.OLEMSGBUTTON_OK,
-				OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-		}
-
 		private void FixReferenceCallback(object sender, EventArgs e)
 		{
 			var dte = (DTE2)ServiceProvider.GetService(typeof(DTE));
@@ -126,90 +104,119 @@ namespace VSSmartReferences
 
 
 				FixReference(currentProject, libPath, sourceProject);
-
-				//System.Diagnostics.Debug.WriteLine($"CurrentProject: {currentProject}, Path:{libPath}, Project:{sourceProject}");
-
 			}
 
 		}
 
+		const string CSPROJ_NAMESPACE = "http://schemas.microsoft.com/developer/msbuild/2003";
+		const string CSPROJ_NAMESPACE_PREFIX = "ns";
+
 		void FixReference(string projectFile, string libRef, string projRef)
 		{
-			XmlDocument xml = new XmlDocument();
-			xml.Load(projectFile);
+
+			XmlNamespaceManager nsMgr;
+			XmlDocument xml = GetCSProjDocument(projectFile, out nsMgr);
 			XmlElement root = xml.DocumentElement;
-			XmlNamespaceManager nsMgr = new XmlNamespaceManager(xml.NameTable);
-			nsMgr.AddNamespace("ns", "http://schemas.microsoft.com/developer/msbuild/2003");
 
 			string projectName = projRef.Substring(projRef.LastIndexOf("\\") + 1);
-			XmlElement xmlProjRef = null;
-			foreach (XmlElement element in root.SelectNodes("//ns:ProjectReference", nsMgr))
-			{
-				if (element.Attributes["Include"] == null)
-					continue;
-
-				if (!element.Attributes["Include"].Value.EndsWith(projectName))
-					continue;
-
-				xmlProjRef = element;
-				//element.ParentNode.RemoveChild(element);
-				break;
-			}
+			XmlElement xmlProjRef = GetProjectReference(xml, nsMgr, projectName);
 
 			if (xmlProjRef == null)
 				throw new Exception("Project Reference not found");
 
-			XmlNode insideVS = root.SelectSingleNode("//ns:ItemGroup[Condition=\"'$(BuildingInsideVisualStudio)' == 'true' \"]", nsMgr);
-			if (insideVS == null)
-			{
-				XmlElement group = xml.CreateElement("ItemGroup", "http://schemas.microsoft.com/developer/msbuild/2003");
-				XmlAttribute cond = xml.CreateAttribute("Condition");
-				cond.Value = "'$(BuildingInsideVisualStudio)' == 'true'";
-				group.Attributes.Append(cond);
+			AddInsideVSRef(xml, nsMgr, xmlProjRef);
+			AddOutsideVSRef(xml, nsMgr, projectName, projectFile, libRef);
 
-				group.AppendChild(xmlProjRef);
-				root.AppendChild(group);
-			}
-			else
-			{
-				insideVS.AppendChild(xmlProjRef);
-			}
+			xml.Save(projectFile);
+		}
 
-			XmlElement xmlLibRef = xml.CreateElement("Reference", "http://schemas.microsoft.com/developer/msbuild/2003");
-			XmlAttribute nameAtt = xml.CreateAttribute("Include");
+		private void AddOutsideVSRef(XmlDocument xml, XmlNamespaceManager nsMgr, string projectName, string projectFile, string libRef)
+		{
+			XmlElement xmlLibRef = xml.CreateElement(CommandUtils.REFERENCE, CSPROJ_NAMESPACE);
+			XmlAttribute nameAtt = xml.CreateAttribute(CommandUtils.INCLUDE);
 			nameAtt.Value = projectName.Substring(0, projectName.LastIndexOf("."));
-			XmlElement hint = xml.CreateElement("HintPath", "http://schemas.microsoft.com/developer/msbuild/2003");
+			XmlElement hint = xml.CreateElement(CommandUtils.HINTPATH, CSPROJ_NAMESPACE);
 
 			Uri currentUri = new Uri(projectFile);
 			Uri refSourceUri = new Uri(libRef);
 			Uri diff = currentUri.MakeRelativeUri(refSourceUri);
-			string relPath = diff.OriginalString.Replace("/Debug/","/$(Configuration)/").Replace("/Release/","/$(Configuration)/");
+			string relPath = diff.OriginalString.Replace("/Debug/", "/$(Configuration)/").Replace("/Release/", "/$(Configuration)/");
 
-			hint.InnerText = relPath.Replace("/","\\");
-			XmlElement priv = xml.CreateElement("Private", "http://schemas.microsoft.com/developer/msbuild/2003");
+			hint.InnerText = relPath.Replace("/", "\\");
+			XmlElement priv = xml.CreateElement(CommandUtils.PRIVATE, CSPROJ_NAMESPACE);
 			priv.InnerText = "False";
 
 			xmlLibRef.Attributes.Append(nameAtt);
 			xmlLibRef.AppendChild(hint);
 			xmlLibRef.AppendChild(priv);
 
-			XmlNode outsideVS = root.SelectSingleNode("//ns:ItemGroup[Condition=\"'$(BuildingInsideVisualStudio)' != 'true' \"]", nsMgr);
+			XmlNode outsideVS = xml.DocumentElement.SelectSingleNode($"//{CSPROJ_NAMESPACE_PREFIX}:ItemGroup[Condition=\"'$(BuildingInsideVisualStudio)' != 'true' \"]", nsMgr);
 			if (outsideVS == null)
 			{
-				XmlElement group = xml.CreateElement("ItemGroup", "http://schemas.microsoft.com/developer/msbuild/2003");
-				XmlAttribute cond = xml.CreateAttribute("Condition");
+				XmlElement group = xml.CreateElement(CommandUtils.ITEM_GORUP, CSPROJ_NAMESPACE);
+				XmlAttribute cond = xml.CreateAttribute(CommandUtils.CONDITION);
 				cond.Value = "'$(BuildingInsideVisualStudio)' != 'true'";
 				group.Attributes.Append(cond);
 
 				group.AppendChild(xmlLibRef);
-				root.AppendChild(group);
+				xml.DocumentElement.AppendChild(group);
 			}
 			else
 			{
 				outsideVS.AppendChild(xmlLibRef);
 			}
+		}
 
-			xml.Save(projectFile);
+		private void AddInsideVSRef(XmlDocument xml, XmlNamespaceManager nsMgr, XmlElement xmlProjRef)
+		{
+			if (xmlProjRef.ParentNode.Attributes[CommandUtils.CONDITION] != null)
+			{
+				if (xmlProjRef.ParentNode.Attributes[CommandUtils.CONDITION].Value == "'$(BuildingInsideVisualStudio)' == 'true'")
+					return;
+			}
+
+			XmlNode insideVS = xml.DocumentElement.SelectSingleNode($"//{CSPROJ_NAMESPACE_PREFIX}:ItemGroup[Condition=\"'$(BuildingInsideVisualStudio)' == 'true' \"]", nsMgr);
+			if (insideVS == null)
+			{
+				XmlElement group = xml.CreateElement(CommandUtils.ITEM_GORUP, CSPROJ_NAMESPACE);
+				XmlAttribute cond = xml.CreateAttribute(CommandUtils.CONDITION);
+				cond.Value = "'$(BuildingInsideVisualStudio)' == 'true'";
+				group.Attributes.Append(cond);
+
+				group.AppendChild(xmlProjRef);
+				xml.DocumentElement.AppendChild(group);
+			}
+			else
+			{
+				insideVS.AppendChild(xmlProjRef);
+			}
+		}
+
+		private XmlElement GetProjectReference(XmlDocument xml, XmlNamespaceManager nsMgr, string projectName)
+		{
+			foreach (XmlElement element in xml.DocumentElement.SelectNodes($"//{CSPROJ_NAMESPACE_PREFIX}:ProjectReference", nsMgr))
+			{
+				if (element.Attributes[CommandUtils.INCLUDE] == null)
+					continue;
+
+				if (!element.Attributes[CommandUtils.INCLUDE].Value.EndsWith(projectName))
+					continue;
+
+				return element;
+			}
+
+			return null;
+		}
+
+		XmlDocument GetCSProjDocument(string currentProject, out XmlNamespaceManager nsMgr)
+		{
+			XmlDocument xml = new XmlDocument();
+			xml.Load(currentProject);
+			XmlElement root = xml.DocumentElement;
+			nsMgr = new XmlNamespaceManager(xml.NameTable);
+			nsMgr.AddNamespace(CSPROJ_NAMESPACE_PREFIX, CSPROJ_NAMESPACE);
+
+			return xml;
 		}
 
 	}

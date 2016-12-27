@@ -2,5 +2,5 @@ bin/
 obj/
 packages/
 .vs/
-Key.snk
+
 *.user

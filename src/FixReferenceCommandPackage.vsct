@@ -59,9 +59,9 @@
           If you do not want an image next to your command, remove the Icon node /> -->
 			<Button guid="guidFixReferenceCommandPackageCmdSet" id="FixReferenceCommandId" priority="0x0100" type="Button">
 				<Parent guid="guidFixReferenceCommandPackageCmdSet" id="MyMenuGroup" />
-				<Icon guid="guidImages" id="bmpPic1" />
+				<Icon guid="guidImages1" id="bmpPic1" />
 				<Strings>
-					<ButtonText>Invoke FixReferenceCommand</ButtonText>
+					<ButtonText>Fix Smart Reference</ButtonText>
 				</Strings>
 			</Button>
 			
@@ -77,6 +77,7 @@
             inside a button definition. An important aspect of this declaration is that the element id
             must be the actual index (1-based) of the bitmap inside the bitmap strip. -->
 			<Bitmap guid="guidImages" href="Resources\FixReferenceCommand.png" usedList="bmpPic1, bmpPic2, bmpPicSearch, bmpPicX, bmpPicArrows, bmpPicStrikethrough"/>
+			<Bitmap guid="guidImages1" href="Resources\brain.png" usedList="bmpPic1" />
 		</Bitmaps>
 	</Commands>
 
@@ -98,5 +99,10 @@
 			<IDSymbol name="bmpPicArrows" value="5" />
 			<IDSymbol name="bmpPicStrikethrough" value="6" />
 		</GuidSymbol>
+
+		<GuidSymbol value="{EA4E4BEA-B858-4DBC-8DB3-C6DB86F7AF00}" name="guidImages1">
+			<IDSymbol name="bmpPic1" value="1" />
+		</GuidSymbol>
+		
 	</Symbols>
 </CommandTable>
