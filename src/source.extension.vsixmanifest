@@ -6,6 +6,7 @@
 		<Description xml:space="preserve">Fixes project references to be conditioned by the build scope</Description>
 		<MoreInfo>https://github.com/sebagomez/VSSmartReferences</MoreInfo>
 		<Icon>Resources\brain.ico</Icon>
+		<PreviewImage>Resources\screenshot.png</PreviewImage>
 	</Metadata>
 	<Installation>
 		<InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[14.0]" />

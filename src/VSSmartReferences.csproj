@@ -64,6 +64,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\screenshot.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <VSCTCompile Include="FixReferenceCommandPackage.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
     </VSCTCompile>
