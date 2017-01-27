@@ -113,11 +113,8 @@ namespace VSSmartReferences
 
 		void FixReference(string projectFile, string libRef, string projRef)
 		{
-
 			XmlNamespaceManager nsMgr;
 			XmlDocument xml = GetCSProjDocument(projectFile, out nsMgr);
-			XmlElement root = xml.DocumentElement;
-
 			string projectName = projRef.Substring(projRef.LastIndexOf("\\") + 1);
 			XmlElement xmlProjRef = GetProjectReference(xml, nsMgr, projectName);
 
@@ -150,12 +147,12 @@ namespace VSSmartReferences
 			xmlLibRef.AppendChild(hint);
 			xmlLibRef.AppendChild(priv);
 
-			XmlNode outsideVS = xml.DocumentElement.SelectSingleNode($"//{CSPROJ_NAMESPACE_PREFIX}:ItemGroup[Condition=\"'$(BuildingInsideVisualStudio)' != 'true' \"]", nsMgr);
+			XmlNode outsideVS = xml.DocumentElement.SelectSingleNode($"//{CSPROJ_NAMESPACE_PREFIX}:ItemGroup[@Condition=\"{CommandUtils.BUILD_OUTSIDE_VS}\"]", nsMgr);
 			if (outsideVS == null)
 			{
 				XmlElement group = xml.CreateElement(CommandUtils.ITEM_GORUP, CSPROJ_NAMESPACE);
 				XmlAttribute cond = xml.CreateAttribute(CommandUtils.CONDITION);
-				cond.Value = "'$(BuildingInsideVisualStudio)' != 'true'";
+				cond.Value = CommandUtils.BUILD_OUTSIDE_VS;
 				group.Attributes.Append(cond);
 
 				group.AppendChild(xmlLibRef);
@@ -171,16 +168,16 @@ namespace VSSmartReferences
 		{
 			if (xmlProjRef.ParentNode.Attributes[CommandUtils.CONDITION] != null)
 			{
-				if (xmlProjRef.ParentNode.Attributes[CommandUtils.CONDITION].Value == "'$(BuildingInsideVisualStudio)' == 'true'")
+				if (xmlProjRef.ParentNode.Attributes[CommandUtils.CONDITION].Value == CommandUtils.BUILD_INSIDE_VS)
 					return;
 			}
 
-			XmlNode insideVS = xml.DocumentElement.SelectSingleNode($"//{CSPROJ_NAMESPACE_PREFIX}:ItemGroup[Condition=\"'$(BuildingInsideVisualStudio)' == 'true' \"]", nsMgr);
+			XmlNode insideVS = xml.DocumentElement.SelectSingleNode($"//{CSPROJ_NAMESPACE_PREFIX}:ItemGroup[@Condition=\"{CommandUtils.BUILD_INSIDE_VS}\"]", nsMgr);
 			if (insideVS == null)
 			{
 				XmlElement group = xml.CreateElement(CommandUtils.ITEM_GORUP, CSPROJ_NAMESPACE);
 				XmlAttribute cond = xml.CreateAttribute(CommandUtils.CONDITION);
-				cond.Value = "'$(BuildingInsideVisualStudio)' == 'true'";
+				cond.Value = CommandUtils.BUILD_INSIDE_VS;
 				group.Attributes.Append(cond);
 
 				group.AppendChild(xmlProjRef);
@@ -212,7 +209,6 @@ namespace VSSmartReferences
 		{
 			XmlDocument xml = new XmlDocument();
 			xml.Load(currentProject);
-			XmlElement root = xml.DocumentElement;
 			nsMgr = new XmlNamespaceManager(xml.NameTable);
 			nsMgr.AddNamespace(CSPROJ_NAMESPACE_PREFIX, CSPROJ_NAMESPACE);
 
