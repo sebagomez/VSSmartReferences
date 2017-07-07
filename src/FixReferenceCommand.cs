@@ -1,19 +1,16 @@
 ﻿//------------------------------------------------------------------------------
-// <copyright file="FixReferenceCommand.cs" company="Company">
-//     Copyright (c) Company.  All rights reserved.
+// <copyright file="FixReferenceCommand.cs" company="SebaGomez">
+//     Copyright (c) SebaGomez.  All rights reserved.
 // </copyright>
 //------------------------------------------------------------------------------
 
 using System;
 using System.ComponentModel.Design;
-using System.Globalization;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
-using System.Diagnostics;
+using System.Xml;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
 using VSSmartReferences.Helpers;
-using System.Xml;
 
 namespace VSSmartReferences
 {
@@ -141,7 +138,7 @@ namespace VSSmartReferences
 
 			hint.InnerText = relPath.Replace("/", "\\");
 			XmlElement priv = xml.CreateElement(CommandUtils.PRIVATE, CSPROJ_NAMESPACE);
-			priv.InnerText = "False";
+			priv.InnerText = bool.FalseString;
 
 			xmlLibRef.Attributes.Append(nameAtt);
 			xmlLibRef.AppendChild(hint);
@@ -166,6 +163,8 @@ namespace VSSmartReferences
 
 		private void AddInsideVSRef(XmlDocument xml, XmlNamespaceManager nsMgr, XmlElement xmlProjRef)
 		{
+			SetNoCopyLocal(xmlProjRef, nsMgr);
+
 			if (xmlProjRef.ParentNode.Attributes[CommandUtils.CONDITION] != null)
 			{
 				if (xmlProjRef.ParentNode.Attributes[CommandUtils.CONDITION].Value == CommandUtils.BUILD_INSIDE_VS)
@@ -189,9 +188,20 @@ namespace VSSmartReferences
 			}
 		}
 
+		private void SetNoCopyLocal(XmlElement xmlProjRef, XmlNamespaceManager nsMgr)
+		{
+			XmlNode priv = xmlProjRef.SelectSingleNode($"{CSPROJ_NAMESPACE_PREFIX}:{CommandUtils.PRIVATE}", nsMgr);
+			if (priv == null)
+				priv = xmlProjRef.OwnerDocument.CreateElement(CommandUtils.PRIVATE, CSPROJ_NAMESPACE);
+			
+			priv.InnerText = bool.FalseString;
+			if (priv.ParentNode == null)
+				xmlProjRef.AppendChild(priv);
+		}
+
 		private XmlElement GetProjectReference(XmlDocument xml, XmlNamespaceManager nsMgr, string projectName)
 		{
-			foreach (XmlElement element in xml.DocumentElement.SelectNodes($"//{CSPROJ_NAMESPACE_PREFIX}:ProjectReference", nsMgr))
+			foreach (XmlElement element in xml.DocumentElement.SelectNodes($"//{CSPROJ_NAMESPACE_PREFIX}:{CommandUtils.PROJECT_REFERENCE}", nsMgr))
 			{
 				if (element.Attributes[CommandUtils.INCLUDE] == null)
 					continue;

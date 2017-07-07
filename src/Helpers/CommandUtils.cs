@@ -1,10 +1,9 @@
-﻿using EnvDTE;
-using EnvDTE80;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+using EnvDTE;
+using EnvDTE80;
 
 namespace VSSmartReferences.Helpers
 {
@@ -16,7 +15,7 @@ namespace VSSmartReferences.Helpers
 		public const string INCLUDE = "Include";
 		public const string HINTPATH = "HintPath";
 		public const string PRIVATE = "Private";
-
+		public const string PROJECT_REFERENCE = "ProjectReference";
 
 		public const string BUILD_INSIDE_VS = "'$(BuildingInsideVisualStudio)' == 'true'";
 		public const string BUILD_OUTSIDE_VS = "'$(BuildingInsideVisualStudio)' != 'true'";
