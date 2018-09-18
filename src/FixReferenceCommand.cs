@@ -9,7 +9,9 @@ using System.ComponentModel.Design;
 using System.Xml;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using VSSmartReferences.Helpers;
 
 namespace VSSmartReferences
@@ -93,7 +95,10 @@ namespace VSSmartReferences
 			{
 				var d = (dynamic)item;
 				if (d.SourceProject == null)
+				{
+					Writeline($"{d.Name} is not a source project");
 					continue;
+				}
 
 				string libPath = d.Path;
 				string sourceProject = d.SourceProject.FullName;
@@ -110,13 +115,15 @@ namespace VSSmartReferences
 
 		void FixReference(string projectFile, string libRef, string projRef)
 		{
-			XmlNamespaceManager nsMgr;
-			XmlDocument xml = GetCSProjDocument(projectFile, out nsMgr);
+			XmlDocument xml = GetCSProjDocument(projectFile, out XmlNamespaceManager nsMgr);
 			string projectName = projRef.Substring(projRef.LastIndexOf("\\") + 1);
 			XmlElement xmlProjRef = GetProjectReference(xml, nsMgr, projectName);
 
 			if (xmlProjRef == null)
-				throw new Exception("Project Reference not found");
+			{
+				Writeline($"Project reference for {projectName} not found");
+				return;
+			}
 
 			AddInsideVSRef(xml, nsMgr, xmlProjRef);
 			AddOutsideVSRef(xml, nsMgr, projectName, projectFile, libRef);
@@ -225,5 +232,20 @@ namespace VSSmartReferences
 			return xml;
 		}
 
+		void Writeline(string text)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			IVsOutputWindow outWindow = Package.GetGlobalService(typeof(SVsOutputWindow)) as IVsOutputWindow;
+
+			Guid customGuid = new Guid("C56A383C-7C98-4C13-9D72-81C9F9817BD9");
+			string customTitle = "Smart References";
+			outWindow.CreatePane(ref customGuid, customTitle, 1, 1);
+
+			IVsOutputWindowPane customPane;
+			outWindow.GetPane(ref customGuid, out customPane);
+
+			customPane.OutputString($"{text}\r\n");
+			customPane.Activate(); // Brings this pane into view
+		}
 	}
 }
