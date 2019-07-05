@@ -22,8 +22,9 @@ namespace VSSmartReferences.Helpers
 
 		public static IEnumerable<object> GetSelectedReferences(DTE2 dte)
 		{
+			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
 			var selectedItems = (Array)dte.ToolWindows.SolutionExplorer.SelectedItems;
-			return selectedItems.Cast<UIHierarchyItem>().Select(x => x.Object);
+			return selectedItems.Cast<UIHierarchyItem>().Select(x => { Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread(); return x.Object; });
 		}
 	}
 }
